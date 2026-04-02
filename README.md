@@ -3,6 +3,8 @@
 **Static security auditing for Kubernetes Pod specs — no cluster required.**
 Point it at a YAML file or a whole manifest repo and get a Pod Security Standards, user namespace, and SecurityContext report back in seconds.
 
+[![CI](https://github.com/mdryaan/podsentry/actions/workflows/ci.yml/badge.svg)](https://github.com/mdryaan/podsentry/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/mdryaan/podsentry?color=00ADD8&logo=github)](https://github.com/mdryaan/podsentry/releases/latest)
 [![Go](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Pod%20Security%20Standards-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
@@ -31,18 +33,18 @@ Point it at a YAML file or a whole manifest repo and get a Pod Security Standard
 
 ## Features
 
-- Checks Pods against all three official Pod Security Standard levels (Privileged, Baseline, Restricted), with rule logic matching the upstream Kubernetes definitions
-- Inspects `hostUsers` and explains the resulting UID/GID mapping and container-escape blast radius
-- Audits added/dropped Linux capabilities against the safe baseline set
-- Checks privilege escalation, `runAsNonRoot`, `runAsUser`, `runAsGroup`
-- Checks seccomp profile type at the pod and container level
-- Checks host namespace usage — `hostNetwork`, `hostPID`, `hostIPC`, host ports
-- Combined `inspect` report merging PSS, user namespace, and SecurityContext findings
-- JSON output for CI pipelines, colored table output for humans
-- Recursive directory scanning to audit entire manifest repositories
-- `--exit-code` support for CI gating
-- Reads a single file or a directory of YAML files
-- 100% offline — no cluster, no admission webhook, no external services
+- 🛡️ **All three Pod Security Standard levels** — Privileged, Baseline, and Restricted, with rule logic matching the upstream Kubernetes definitions
+- 🔐 **User namespace inspection** — reads `hostUsers` and explains the resulting UID/GID mapping and container-escape blast radius
+- 🧬 **Linux capability auditing** — checks added and dropped capabilities against the safe baseline set
+- ⬆️ **Privilege escalation checks** — `allowPrivilegeEscalation`, `runAsNonRoot`, `runAsUser`, `runAsGroup`
+- 🧱 **Seccomp profile checks** — at both the pod and container level
+- 🌐 **Host namespace checks** — `hostNetwork`, `hostPID`, `hostIPC`, and host ports
+- 🔎 **Combined `inspect` report** — merges PSS, user namespace, and SecurityContext findings into one view
+- 📄 **JSON output** for pipelines, 🎨 **colored tables** for humans
+- 📂 **Recursive directory scanning** — audit an entire manifest repository in one pass
+- 🚦 **`--exit-code` CI gating** — non-zero exit on any violation, so it fails a build like a test would
+- ⚙️ **GitHub Action included** — drop it into any workflow, no Go toolchain needed
+- 🔌 **100% offline** — no cluster, no admission webhook, no external services
 
 ## Commands
 
@@ -95,44 +97,94 @@ No database. No external services. No cluster dependency.
 
 `internal/loader` is the only package that touches the filesystem. Every check package (`pss`, `userns`, `securitycontext`) operates purely on an in-memory `corev1.PodSpec` and has no I/O of its own, which is what makes them straightforward to unit test.
 
-## CI usage
+## Use it in CI
+
+The repository ships a GitHub Action, so no Go toolchain or manual install is needed:
 
 ```yaml
 # .github/workflows/podsentry.yml
 name: podsentry
 on: [pull_request]
+
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: mdryaan/podsentry@v0.1.0
         with:
-          go-version: "1.22"
-      - run: go install github.com/mdryaan/podsentry@latest
-      - run: podsentry pss ./manifests --recursive --level restricted --exit-code
+          path: ./manifests
+          level: restricted
+          recursive: true
 ```
 
-The `--exit-code` flag makes any command exit non-zero if a Pod fails a check, so it gates the job the same way a test failure would.
+The action writes the full report to the job summary and fails the build on any violation.
 
-## Prerequisites
+### Action inputs
 
-- Go 1.22 or newer (only needed to build from source; a prebuilt binary has no runtime dependency)
+| Input | Default | Description |
+|---|---|---|
+| `path` | `.` | File or directory of Pod manifests to audit |
+| `command` | `pss` | `pss`, `inspect`, `userns`, or `securitycontext` |
+| `level` | `restricted` | `privileged`, `baseline`, or `restricted` (used by `pss`) |
+| `recursive` | `true` | Recursively scan directories |
+| `fail-on-findings` | `true` | Fail the job when any Pod is non-compliant |
+| `json` | `false` | Emit JSON instead of a table |
+| `version` | `latest` | Pin a specific podsentry release |
 
-## Install and run locally
+### Action outputs
+
+| Output | Description |
+|---|---|
+| `report` | Path to the report file |
+| `compliant` | `true` when every scanned Pod passed |
+
+Report findings without failing the build — useful when adopting it on an existing repo:
+
+```yaml
+      - uses: mdryaan/podsentry@v0.1.0
+        id: audit
+        with:
+          path: ./manifests
+          fail-on-findings: false
+      - run: echo "compliant=${{ steps.audit.outputs.compliant }}"
+```
+
+### Without the action
+
+`--exit-code` makes any command exit non-zero on a violation, so it gates a job the same way a test failure would:
+
+```bash
+podsentry pss ./manifests --recursive --level restricted --exit-code
+```
+
+## Install
+
+**Download a release binary** (no Go toolchain required) — see [Releases](https://github.com/mdryaan/podsentry/releases):
+
+```bash
+VERSION=0.1.0
+curl -sSfL "https://github.com/mdryaan/podsentry/releases/download/v${VERSION}/podsentry_${VERSION}_linux_amd64.tar.gz" \
+  | tar -xz podsentry
+sudo mv podsentry /usr/local/bin/
+podsentry version
+```
+
+Binaries are published for Linux, macOS, and Windows on both amd64 and arm64, with SHA256 checksums and an SBOM attached to every release.
+
+**With Go:**
+
+```bash
+go install github.com/mdryaan/podsentry@latest
+```
+
+**From source:**
 
 ```bash
 git clone https://github.com/mdryaan/podsentry.git
 cd podsentry
-go mod download
-go build -o podsentry ./main.go
+make build
 ./podsentry --help
-```
-
-Or install directly with `go install`:
-
-```bash
-go install github.com/mdryaan/podsentry@latest
 ```
 
 ## Example usage
