@@ -1,0 +1,75 @@
+version: 2
+
+project_name: podsentry
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: podsentry
+    main: ./main.go
+    binary: podsentry
+    env:
+      # Static binaries so they run on any distro and inside scratch/distroless.
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/mdryaan/podsentry/pkg/version.Version={{ .Version }}
+      - -X github.com/mdryaan/podsentry/pkg/version.Commit={{ .ShortCommit }}
+      - -X github.com/mdryaan/podsentry/pkg/version.BuildDate={{ .Date }}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+      - examples/*
+
+checksum:
+  name_template: checksums.txt
+
+sboms:
+  - artifacts: archive
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^feat'
+      order: 0
+    - title: Fixes
+      regexp: '^fix'
+      order: 1
+    - title: Other
+      order: 99
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+
+release:
+  draft: false
+  prerelease: auto
+  footer: |
+    ## Install
+
+    ```bash
+    go install github.com/mdryaan/podsentry@{{ .Tag }}
+    ```
+
+    Or download a binary from the assets below and put it on your `PATH`.
