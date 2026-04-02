@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Supersede in-flight runs on the same ref rather than paying for both.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Go ${{ matrix.go }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # go.mod declares 1.22; 1.23 and 1.24 guard against upstream breakage.
+        go: ['1.22', '1.23', '1.24']
+        os: [ubuntu-latest]
+        include:
+          # podsentry reads files and renders terminal output, both of which are
+          # platform-sensitive — so the supported Go version is also run on
+          # macOS and Windows.
+          - go: '1.22'
+            os: macos-latest
+          - go: '1.22'
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify go.mod is tidy
+        if: matrix.os == 'ubuntu-latest' && matrix.go == '1.22'
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum \
+            || (echo "::error::go.mod/go.sum are not tidy — run 'go mod tidy'" && exit 1)
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Coverage summary
+        if: matrix.os == 'ubuntu-latest' && matrix.go == '1.22'
+        run: |
+          go tool cover -func=coverage.out | tail -1
+          {
+            echo '### Coverage'
+            echo '```'
+            go tool cover -func=coverage.out | grep -E 'total|internal/' | tail -20
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage profile
+        if: matrix.os == 'ubuntu-latest' && matrix.go == '1.22'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+          retention-days: 7
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+          args: --timeout=5m
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      # Catch platform-specific compile errors without shipping anything.
+      - name: Cross-compile
+        run: |
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            echo "building $target"
+            GOOS=${target%/*} GOARCH=${target#*/} go build -o /dev/null ./main.go
+          done
+
+      - name: Smoke test the CLI against the example manifests
+        run: |
+          go build -o podsentry ./main.go
+
+          ./podsentry version
+          ./podsentry pss ./examples --recursive
+          ./podsentry inspect examples/restricted-pod.yaml
+          ./podsentry userns examples/userns-enabled-pod.yaml
+          ./podsentry securitycontext examples/privileged-pod.yaml
+
+          echo "--- a compliant pod must exit 0 under --exit-code ---"
+          ./podsentry pss examples/restricted-pod.yaml --level restricted --exit-code
+
+          echo "--- a privileged pod must exit non-zero under --exit-code ---"
+          if ./podsentry pss examples/privileged-pod.yaml --level restricted --exit-code; then
+            echo "::error::--exit-code did not fail on a non-compliant pod"
+            exit 1
+          fi
+
+          echo "--- --json must emit parseable JSON ---"
+          ./podsentry pss ./examples --recursive --json | python3 -m json.tool > /dev/null

@@ -1,0 +1,51 @@
+# Conservative, high-signal linter set. Everything enabled here is expected to
+# stay green — a linter that cries wolf gets disabled, so the bar is that each
+# finding is worth fixing.
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck # unchecked errors
+    - govet # suspicious constructs
+    - ineffassign # assignments never used
+    - staticcheck # correctness and simplification
+    - unused # unused code
+    - gofmt # formatting
+    - goimports # import grouping and ordering
+    - misspell # common English misspellings
+    - revive # golint successor, style
+    - bodyclose # unclosed HTTP response bodies
+    - errorlint # correct use of errors.Is/As and %w
+    - unconvert # redundant type conversions
+    - whitespace # leading/trailing newlines in blocks
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/mdryaan/podsentry
+  misspell:
+    locale: US
+  revive:
+    rules:
+      - name: exported
+        # Exported identifiers should be documented — this is a library-ish
+        # codebase, so it is worth enforcing on pkg/.
+        arguments: [checkPrivateReceivers]
+      - name: indent-error-flow
+      - name: errorf
+      - name: context-as-argument
+      - name: error-return
+      - name: error-strings
+      - name: increment-decrement
+      - name: var-declaration
+      - name: unreachable-code
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    # Table-driven tests routinely ignore errors from helpers on purpose.
+    - path: _test\.go
+      linters:
+        - errcheck
