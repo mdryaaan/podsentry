@@ -1,0 +1,168 @@
+name: podsentry
+description: >-
+  Audit Kubernetes Pod manifests against the Pod Security Standards, user
+  namespace configuration, and SecurityContext hardening — offline, no cluster
+  required.
+author: Md Raiyan
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: File or directory of Pod manifests to audit.
+    required: false
+    default: '.'
+  command:
+    description: 'Which audit to run: pss, inspect, userns, or securitycontext.'
+    required: false
+    default: pss
+  level:
+    description: 'Pod Security Standard level: privileged, baseline, or restricted. Only used by the pss command.'
+    required: false
+    default: restricted
+  recursive:
+    description: Recursively scan directories for manifests.
+    required: false
+    default: 'true'
+  fail-on-findings:
+    description: Fail the job when any Pod is non-compliant.
+    required: false
+    default: 'true'
+  json:
+    description: Emit JSON instead of a table. The report is still written to the step summary.
+    required: false
+    default: 'false'
+  version:
+    description: podsentry version to use, e.g. v0.1.0. Defaults to the latest release.
+    required: false
+    default: latest
+
+outputs:
+  report:
+    description: Path to the file containing the podsentry report.
+    value: ${{ steps.run.outputs.report }}
+  compliant:
+    description: '"true" when every scanned Pod passed, "false" otherwise.'
+    value: ${{ steps.run.outputs.compliant }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install podsentry
+      shell: bash
+      env:
+        PODSENTRY_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        case "$(uname -m)" in
+          x86_64)          arch=amd64 ;;
+          aarch64|arm64)   arch=arm64 ;;
+          *) echo "::error::unsupported architecture $(uname -m)"; exit 1 ;;
+        esac
+
+        case "$(uname -s)" in
+          Linux)   os=linux ;;
+          Darwin)  os=darwin ;;
+          *) echo "::error::unsupported OS $(uname -s)"; exit 1 ;;
+        esac
+
+        version="${PODSENTRY_VERSION}"
+        if [ "$version" = "latest" ]; then
+          version=$(curl -sSfL https://api.github.com/repos/mdryaan/podsentry/releases/latest \
+            | grep -m1 '"tag_name"' | cut -d'"' -f4)
+        fi
+
+        if [ -z "$version" ]; then
+          echo "::error::could not resolve a podsentry release version"
+          exit 1
+        fi
+
+        echo "installing podsentry ${version} (${os}/${arch})"
+        tmp=$(mktemp -d)
+        url="https://github.com/mdryaan/podsentry/releases/download/${version}/podsentry_${version#v}_${os}_${arch}.tar.gz"
+
+        # Fall back to building from source if no prebuilt archive matches — this
+        # keeps the action usable on platforms a release does not cover yet.
+        if ! curl -sSfL "$url" -o "$tmp/podsentry.tar.gz"; then
+          echo "no prebuilt archive at ${url}; building from source"
+          go install "github.com/mdryaan/podsentry@${version}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          exit 0
+        fi
+
+        tar -xzf "$tmp/podsentry.tar.gz" -C "$tmp"
+        mkdir -p "$HOME/.podsentry/bin"
+        mv "$tmp/podsentry" "$HOME/.podsentry/bin/podsentry"
+        chmod +x "$HOME/.podsentry/bin/podsentry"
+        echo "$HOME/.podsentry/bin" >> "$GITHUB_PATH"
+
+    - name: Run podsentry
+      id: run
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_LEVEL: ${{ inputs.level }}
+        INPUT_RECURSIVE: ${{ inputs.recursive }}
+        INPUT_FAIL: ${{ inputs.fail-on-findings }}
+        INPUT_JSON: ${{ inputs.json }}
+      run: |
+        set -uo pipefail
+
+        args=("$INPUT_COMMAND" "$INPUT_PATH")
+
+        # --level is only meaningful for pss.
+        if [ "$INPUT_COMMAND" = "pss" ]; then
+          args+=(--level "$INPUT_LEVEL")
+        fi
+
+        if [ "$INPUT_RECURSIVE" = "true" ]; then
+          args+=(--recursive)
+        fi
+
+        if [ "$INPUT_JSON" = "true" ]; then
+          args+=(--json)
+        fi
+
+        # Always ask for the exit code so compliance can be reported, then decide
+        # separately whether that should fail the job.
+        args+=(--exit-code)
+
+        report="${RUNNER_TEMP:-/tmp}/podsentry-report.txt"
+        podsentry version
+        set +e
+        podsentry "${args[@]}" | tee "$report"
+        status=${PIPESTATUS[0]}
+        set -e
+
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+
+        if [ "$status" -eq 0 ]; then
+          echo "compliant=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "compliant=false" >> "$GITHUB_OUTPUT"
+        fi
+
+        {
+          echo "## podsentry — \`$INPUT_COMMAND\` on \`$INPUT_PATH\`"
+          echo
+          if [ "$status" -eq 0 ]; then
+            echo "All scanned Pods passed."
+          else
+            echo "Findings were reported. See the details below."
+          fi
+          echo
+          echo '```'
+          cat "$report"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        if [ "$status" -ne 0 ] && [ "$INPUT_FAIL" = "true" ]; then
+          echo "::error::podsentry found non-compliant Pods in ${INPUT_PATH}"
+          exit "$status"
+        fi
+
+        exit 0
