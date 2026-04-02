@@ -2,6 +2,7 @@ package loader
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -27,7 +28,10 @@ func ParsePods(r io.Reader) ([]ParsedDocument, error) {
 	for {
 		var raw map[string]interface{}
 		err := decoder.Decode(&raw)
-		if err == io.EOF {
+		// errors.Is rather than ==: a decoder may wrap io.EOF, and a direct
+		// comparison would then miss the end of the stream and surface it as a
+		// decode failure instead.
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
