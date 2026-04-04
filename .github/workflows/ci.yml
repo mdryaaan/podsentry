@@ -26,9 +26,13 @@ jobs:
         os: [ubuntu-latest]
         include:
           # podsentry reads files and renders terminal output, both of which are
-          # platform-sensitive — so the supported Go version is also run on
-          # macOS and Windows.
-          - go: '1.22'
+          # platform-sensitive — so it is also exercised on macOS and Windows.
+          #
+          # macOS pins 1.23 rather than 1.22: the macos-latest runners are arm64,
+          # and binaries linked by Go 1.22 there are rejected by dyld with
+          # "missing LC_UUID load command". That is a toolchain bug, not a
+          # podsentry one — the same tests pass under -race on Linux and Windows.
+          - go: '1.23'
             os: macos-latest
           - go: '1.22'
             os: windows-latest
