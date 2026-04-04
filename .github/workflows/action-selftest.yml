@@ -1,0 +1,72 @@
+name: Action self-test
+
+# Dogfoods the published composite action against this repository's own example
+# manifests, so a broken action.yml is caught here rather than in someone
+# else's pipeline.
+on:
+  pull_request:
+    paths:
+      - 'action.yml'
+      - 'examples/**'
+      - '.github/workflows/action-selftest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'action.yml'
+      - 'examples/**'
+      - '.github/workflows/action-selftest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: Run the action against ./examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # The examples include deliberately non-compliant Pods, so findings are
+      # expected — the point is that the action runs and reports them.
+      - name: Audit the examples (reporting only)
+        id: audit
+        uses: ./
+        with:
+          path: ./examples
+          level: restricted
+          recursive: true
+          fail-on-findings: false
+
+      - name: A directory containing privileged Pods must not report compliant
+        run: |
+          echo "compliant=${{ steps.audit.outputs.compliant }}"
+          if [ "${{ steps.audit.outputs.compliant }}" != "false" ]; then
+            echo "::error::expected findings in ./examples but the action reported compliant"
+            exit 1
+          fi
+
+      - name: A compliant Pod must report compliant
+        id: good
+        uses: ./
+        with:
+          path: ./examples/restricted-pod.yaml
+          level: restricted
+          recursive: false
+          fail-on-findings: true
+
+      - name: Assert the compliant case
+        run: |
+          if [ "${{ steps.good.outputs.compliant }}" != "true" ]; then
+            echo "::error::restricted-pod.yaml should pass the restricted level"
+            exit 1
+          fi
+
+      - name: The inspect command must also work through the action
+        uses: ./
+        with:
+          command: inspect
+          path: ./examples/userns-enabled-pod.yaml
+          recursive: false
+          fail-on-findings: false
