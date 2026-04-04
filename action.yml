@@ -71,8 +71,11 @@ runs:
 
         version="${PODSENTRY_VERSION}"
         if [ "$version" = "latest" ]; then
-          version=$(curl -sSfL https://api.github.com/repos/mdryaan/podsentry/releases/latest \
-            | grep -m1 '"tag_name"' | cut -d'"' -f4)
+          # The response is buffered into a variable before parsing: piping curl
+          # straight into `grep -m1` makes grep close the pipe early, which under
+          # `set -o pipefail` surfaces as curl exit 23 and kills the step.
+          release_json=$(curl -sSfL https://api.github.com/repos/mdryaan/podsentry/releases/latest)
+          version=$(printf '%s' "$release_json" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
         fi
 
         if [ -z "$version" ]; then
