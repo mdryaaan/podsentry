@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: mdryaan/podsentry@v0.1.0
+      - uses: mdryaan/podsentry@v0
         with:
           path: ./manifests
           level: restricted
@@ -119,6 +119,9 @@ jobs:
 ```
 
 The action writes the full report to the job summary and fails the build on any violation.
+
+`@v0` is a floating tag that tracks the latest `v0.x` release, so bug fixes arrive automatically.
+Pin an exact version (`@v0.1.1`) instead if you would rather upgrade deliberately.
 
 ### Action inputs
 
@@ -142,7 +145,7 @@ The action writes the full report to the job summary and fails the build on any 
 Report findings without failing the build — useful when adopting it on an existing repo:
 
 ```yaml
-      - uses: mdryaan/podsentry@v0.1.0
+      - uses: mdryaan/podsentry@v0
         id: audit
         with:
           path: ./manifests
@@ -163,7 +166,7 @@ podsentry pss ./manifests --recursive --level restricted --exit-code
 **Download a release binary** (no Go toolchain required) — see [Releases](https://github.com/mdryaan/podsentry/releases):
 
 ```bash
-VERSION=0.1.0
+VERSION=0.1.1
 curl -sSfL "https://github.com/mdryaan/podsentry/releases/download/v${VERSION}/podsentry_${VERSION}_linux_amd64.tar.gz" \
   | tar -xz podsentry
 sudo mv podsentry /usr/local/bin/
