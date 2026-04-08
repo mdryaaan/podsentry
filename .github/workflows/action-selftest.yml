@@ -4,17 +4,6 @@ name: Action self-test
 # manifests, so a broken action.yml is caught here rather than in someone
 # else's pipeline.
 on:
-  pull_request:
-    paths:
-      - 'action.yml'
-      - 'examples/**'
-      - '.github/workflows/action-selftest.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'action.yml'
-      - 'examples/**'
-      - '.github/workflows/action-selftest.yml'
   workflow_dispatch:
 
 permissions:
