@@ -1,4 +1,4 @@
-module github.com/mdryaan/podsentry
+module github.com/mdryaaan/podsentry
 
 go 1.22.0
 

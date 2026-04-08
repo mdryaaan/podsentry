@@ -9,7 +9,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/mdryaan/podsentry/internal/loader"
+	"github.com/mdryaaan/podsentry/internal/loader"
 )
 
 var jsonOutput bool

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mdryaan/podsentry/internal/pss"
+	"github.com/mdryaaan/podsentry/internal/pss"
 )
 
 func TestHasFailuresPSS(t *testing.T) {

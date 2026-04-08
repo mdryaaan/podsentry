@@ -6,7 +6,7 @@ package securitycontext
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/mdryaan/podsentry/internal/utils"
+	"github.com/mdryaaan/podsentry/internal/utils"
 )
 
 // ContainerAudit bundles every security context finding for a single

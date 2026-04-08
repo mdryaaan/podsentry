@@ -5,7 +5,7 @@ package userns
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/mdryaan/podsentry/internal/utils"
+	"github.com/mdryaaan/podsentry/internal/utils"
 )
 
 // Report is the outcome of inspecting a pod's user namespace configuration.

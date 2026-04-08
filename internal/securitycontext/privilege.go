@@ -3,7 +3,7 @@ package securitycontext
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/mdryaan/podsentry/internal/utils"
+	"github.com/mdryaaan/podsentry/internal/utils"
 )
 
 // PrivilegeReport summarizes a single container's privilege-related

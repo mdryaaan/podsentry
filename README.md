@@ -3,8 +3,8 @@
 **Static security auditing for Kubernetes Pod specs — no cluster required.**
 Point it at a YAML file or a whole manifest repo and get a Pod Security Standards, user namespace, and SecurityContext report back in seconds.
 
-[![CI](https://github.com/mdryaan/podsentry/actions/workflows/ci.yml/badge.svg)](https://github.com/mdryaan/podsentry/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/mdryaan/podsentry?color=00ADD8&logo=github)](https://github.com/mdryaan/podsentry/releases/latest)
+[![CI](https://github.com/mdryaaan/podsentry/actions/workflows/ci.yml/badge.svg)](https://github.com/mdryaaan/podsentry/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/mdryaaan/podsentry?color=00ADD8&logo=github)](https://github.com/mdryaaan/podsentry/releases/latest)
 [![Go](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Pod%20Security%20Standards-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: mdryaan/podsentry@v0
+      - uses: mdryaaan/podsentry@v0
         with:
           path: ./manifests
           level: restricted
@@ -121,7 +121,7 @@ jobs:
 The action writes the full report to the job summary and fails the build on any violation.
 
 `@v0` is a floating tag that tracks the latest `v0.x` release, so bug fixes arrive automatically.
-Pin an exact version (`@v0.1.1`) instead if you would rather upgrade deliberately.
+Pin an exact version (`@v0.1.2`) instead if you would rather upgrade deliberately.
 
 ### Action inputs
 
@@ -145,7 +145,7 @@ Pin an exact version (`@v0.1.1`) instead if you would rather upgrade deliberatel
 Report findings without failing the build — useful when adopting it on an existing repo:
 
 ```yaml
-      - uses: mdryaan/podsentry@v0
+      - uses: mdryaaan/podsentry@v0
         id: audit
         with:
           path: ./manifests
@@ -163,11 +163,11 @@ podsentry pss ./manifests --recursive --level restricted --exit-code
 
 ## Install
 
-**Download a release binary** (no Go toolchain required) — see [Releases](https://github.com/mdryaan/podsentry/releases):
+**Download a release binary** (no Go toolchain required) — see [Releases](https://github.com/mdryaaan/podsentry/releases):
 
 ```bash
-VERSION=0.1.1
-curl -sSfL "https://github.com/mdryaan/podsentry/releases/download/v${VERSION}/podsentry_${VERSION}_linux_amd64.tar.gz" \
+VERSION=0.1.2
+curl -sSfL "https://github.com/mdryaaan/podsentry/releases/download/v${VERSION}/podsentry_${VERSION}_linux_amd64.tar.gz" \
   | tar -xz podsentry
 sudo mv podsentry /usr/local/bin/
 podsentry version
@@ -178,13 +178,13 @@ Binaries are published for Linux, macOS, and Windows on both amd64 and arm64, wi
 **With Go:**
 
 ```bash
-go install github.com/mdryaan/podsentry@latest
+go install github.com/mdryaaan/podsentry@latest
 ```
 
 **From source:**
 
 ```bash
-git clone https://github.com/mdryaan/podsentry.git
+git clone https://github.com/mdryaaan/podsentry.git
 cd podsentry
 make build
 ./podsentry --help

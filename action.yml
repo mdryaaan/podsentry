@@ -74,7 +74,7 @@ runs:
           # The response is buffered into a variable before parsing: piping curl
           # straight into `grep -m1` makes grep close the pipe early, which under
           # `set -o pipefail` surfaces as curl exit 23 and kills the step.
-          release_json=$(curl -sSfL https://api.github.com/repos/mdryaan/podsentry/releases/latest)
+          release_json=$(curl -sSfL https://api.github.com/repos/mdryaaan/podsentry/releases/latest)
           version=$(printf '%s' "$release_json" | grep '"tag_name"' | head -1 | cut -d'"' -f4)
         fi
 
@@ -85,13 +85,13 @@ runs:
 
         echo "installing podsentry ${version} (${os}/${arch})"
         tmp=$(mktemp -d)
-        url="https://github.com/mdryaan/podsentry/releases/download/${version}/podsentry_${version#v}_${os}_${arch}.tar.gz"
+        url="https://github.com/mdryaaan/podsentry/releases/download/${version}/podsentry_${version#v}_${os}_${arch}.tar.gz"
 
         # Fall back to building from source if no prebuilt archive matches — this
         # keeps the action usable on platforms a release does not cover yet.
         if ! curl -sSfL "$url" -o "$tmp/podsentry.tar.gz"; then
           echo "no prebuilt archive at ${url}; building from source"
-          go install "github.com/mdryaan/podsentry@${version}"
+          go install "github.com/mdryaaan/podsentry@${version}"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           exit 0
         fi

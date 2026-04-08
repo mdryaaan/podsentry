@@ -11,7 +11,7 @@ need to get a dev environment running and to send a useful pull request.
 ## Dev environment setup
 
 ```bash
-git clone https://github.com/mdryaan/podsentry.git
+git clone https://github.com/mdryaaan/podsentry.git
 cd podsentry
 go mod download
 go build -o podsentry ./main.go

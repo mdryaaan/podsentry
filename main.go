@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mdryaan/podsentry/cmd"
+	"github.com/mdryaaan/podsentry/cmd"
 )
 
 func main() {

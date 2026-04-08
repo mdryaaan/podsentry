@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mdryaan/podsentry/internal/report"
-	"github.com/mdryaan/podsentry/internal/securitycontext"
+	"github.com/mdryaaan/podsentry/internal/report"
+	"github.com/mdryaaan/podsentry/internal/securitycontext"
 )
 
 var (

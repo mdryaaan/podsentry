@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mdryaan/podsentry/pkg/version"
+	"github.com/mdryaaan/podsentry/pkg/version"
 )
 
 var versionCmd = &cobra.Command{

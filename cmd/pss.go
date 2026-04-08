@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mdryaan/podsentry/internal/pss"
-	"github.com/mdryaan/podsentry/internal/report"
+	"github.com/mdryaaan/podsentry/internal/pss"
+	"github.com/mdryaaan/podsentry/internal/report"
 )
 
 var (

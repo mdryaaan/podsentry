@@ -3,9 +3,9 @@
 package report
 
 import (
-	"github.com/mdryaan/podsentry/internal/pss"
-	"github.com/mdryaan/podsentry/internal/securitycontext"
-	"github.com/mdryaan/podsentry/internal/userns"
+	"github.com/mdryaaan/podsentry/internal/pss"
+	"github.com/mdryaaan/podsentry/internal/securitycontext"
+	"github.com/mdryaaan/podsentry/internal/userns"
 )
 
 // PodReport is the full audit output for a single pod, combining whichever

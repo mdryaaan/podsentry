@@ -20,9 +20,9 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/mdryaan/podsentry/pkg/version.Version={{ .Version }}
-      - -X github.com/mdryaan/podsentry/pkg/version.Commit={{ .ShortCommit }}
-      - -X github.com/mdryaan/podsentry/pkg/version.BuildDate={{ .Date }}
+      - -X github.com/mdryaaan/podsentry/pkg/version.Version={{ .Version }}
+      - -X github.com/mdryaaan/podsentry/pkg/version.Commit={{ .ShortCommit }}
+      - -X github.com/mdryaaan/podsentry/pkg/version.BuildDate={{ .Date }}
 
 archives:
   - id: default
@@ -69,7 +69,7 @@ release:
     ## Install
 
     ```bash
-    go install github.com/mdryaan/podsentry@{{ .Tag }}
+    go install github.com/mdryaaan/podsentry@{{ .Tag }}
     ```
 
     Or download a binary from the assets below and put it on your `PATH`.
